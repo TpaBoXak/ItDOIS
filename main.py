@@ -64,13 +64,48 @@ def registration():
 def new_place():
     place_id = uuid.uuid4()
     place_name = request.form["place_name"]
-    user_id = request.form["user_id"]
+    user_id = request.headers['user_id']
 
     place = Place(place_id=place_id, place_name=place_name, user_id=user_id)
 
     try:
         db.session.add(place)
         db.session.commit()
+        return {"place_id": place_id}
     except:
         return make_response("404 Error", 400)
 
+
+@app.route('/newdeal', methods='POST')
+def new_deal():
+    deal_id = uuid.uuid4()
+    deal_name = request.form["deal_name"]
+    user_id = request.headers["user_id"]
+    place_id = request.headers["place_id"]
+
+    deal = Deal(deal_id=deal_id, deal_name=deal_name, user_id=user_id, place_id=place_id)
+
+    try:
+        db.session.add(deal)
+        db.session.commit()
+        return {"deal_id": deal_id}
+    except:
+        return make_response("404 Error", 400)
+
+
+@app.route('/newduration', methods='POST')
+def new_duration():
+    duration_id = uuid.uuid4()
+    user_id = request.form["user_id"]
+    place_id_1 = request.form["place_id_1"]
+    place_id_2 = request.form["place_id_2"]
+    route_duration = 0
+
+    duration = Duration(duration_id=duration_id, user_id=user_id, place_id_1=place_id_1, place_id_2=place_id_2, route_duration=route_duration)
+
+    try:
+        db.session.add(duration)
+        db.session.commit()
+        return {"duration_id": duration_id}
+    except:
+        return make_response("404 Error", 400)
