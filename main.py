@@ -45,10 +45,10 @@ class Duration(db.Model):
 
 @app.route('/registration', methods='POST')
 def registration():
-    nickname = request.form['nickname']
-    salt = request.form['salt']
-    password_hash = request.form['password_hash']
     user_id = uuid.uuid4()
+    nickname = request.form["nickname"]
+    salt = request.form["salt"]
+    password_hash = request.form["password_hash"]
 
     user = User(user_id=user_id, nickname=nickname, salt=salt, password_hash=password_hash)
 
@@ -62,3 +62,15 @@ def registration():
 
 @app.route('/newplace', methods='POST')
 def new_place():
+    place_id = uuid.uuid4()
+    place_name = request.form["place_name"]
+    user_id = request.form["user_id"]
+
+    place = Place(place_id=place_id, place_name=place_name, user_id=user_id)
+
+    try:
+        db.session.add(place)
+        db.session.commit()
+    except:
+        return make_response("404 Error", 400)
+
