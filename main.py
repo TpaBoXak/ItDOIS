@@ -59,7 +59,7 @@ def reg():
 
     db.session.add(user)
     db.session.commit()
-    return {"user_token": user_token}
+    return {"token": user_token}
 
 
 @app.route('/salt', methods=["GET"])
@@ -87,7 +87,7 @@ def get_token():
 def new_place():
     place_id = str(uuid.uuid4())
     place_name = request.json["name"]
-    user_token = request.headers["user_token"]
+    user_token = request.headers["token"]
     user = User.query.filter(User.user_token == user_token).first()
 
     place = Place(place_id=place_id, place_name=place_name, user_id=user.user_id)
@@ -114,7 +114,7 @@ def new_place():
 @app.route('/places', methods=["GET"])
 def get_places():
     places = []
-    user_token = request.headers["user_token"]
+    user_token = request.headers["token"]
     user = User.query.filter(User.user_token == user_token).first()
     places_for_user = user.places
     for place_user in places_for_user:
@@ -134,11 +134,11 @@ def get_places():
 #     user = User.query.get(place.user_id)
 #     print(user)
 #     if user:
-#         return {"user_token": user.user_token}
+#         return {"token: user.user_token}
 @app.route('/places/<string:place_id>', methods=["PUT"])
 def put_places(place_id):
     place = Place.query.filter(Place.place_id == place_id).first()
-    user_token = request.headers["user_token"]
+    user_token = request.headers["token"]
     true_user = User.query.get(place.user_id)
     if user_token != true_user.user_token:
         abort(500)
@@ -174,7 +174,7 @@ def new_job():
     job_id = str(uuid.uuid4())
     job_name = request.json["name"]
     job_duration = int(request.json["duration"])
-    user_token = request.headers["user_token"]
+    user_token = request.headers["token"]
     user = User.query.filter(User.user_token == user_token).first()
     place_id = request.json["place"]["place_id"]
     place = Place.query.filter(Place.place_id == place_id).first()
@@ -189,7 +189,7 @@ def new_job():
 @app.route('/jobs', methods=["GET"])
 def get_job():
     jobs = []
-    user_token = request.headers["user_token"]
+    user_token = request.headers["token"]
     user = User.query.filter(User.user_token == user_token).first()
     places_for_user = user.places
     for place in places_for_user:
