@@ -48,7 +48,7 @@ class Route(db.Model):
 @app.route('/registration', methods=["POST"])
 def reg():
     user_token = str(uuid.uuid4())
-    nickname = request.json["nickname"]
+    nickname = request.json["username"]
     salt = request.json["salt"]
     password_hash = request.json["password_hash"]
 
