@@ -52,6 +52,9 @@ def reg():
     salt = request.json["salt"]
     password_hash = request.json["password_hash"]
 
+    if User.query.filter(nickname == nickname).first():
+        abort(403)
+
     user = User(user_token=user_token, nickname=nickname, salt=salt, password_hash=password_hash)
 
     db.session.add(user)
@@ -61,7 +64,7 @@ def reg():
 
 @app.route('/salt', methods=["GET"])
 def get_salt():
-    nickname = request.json["nickname"]
+    nickname = request.json["username"]
     user = User.query.filter(User.nickname == nickname).first()
     if user:
         return {"salt": user.salt}
@@ -71,7 +74,7 @@ def get_salt():
 
 @app.route('/token', methods=["GET"])
 def get_token():
-    nickname = request.json["nickname"]
+    nickname = request.json["username"]
     password_hash = request.json["password_hash"]
     user = User.query.filter(User.nickname == nickname).first()
     if user and password_hash == user.password_hash:
@@ -167,19 +170,55 @@ def del_places(place_id):
 
 
 @app.route('/jobs', methods=["POST"])
-def new_deal():
+def new_job():
     job_id = str(uuid.uuid4())
     job_name = request.json["name"]
+    job_duration = int(request.json["duration"])
     user_token = request.headers["user_token"]
     user = User.query.filter(User.user_token == user_token).first()
     place_id = request.json["place"]["place_id"]
     place = Place.query.filter(Place.place_id == place_id).first()
 
-    job = Job(job_id=job_id, job_name=job_name, job_duration=0, user_id=user.user_id, place_id=place.id)
+    job = Job(job_id=job_id, job_name=job_name, job_duration=job_duration, user_id=user.user_id, place_id=place.id)
 
     db.session.add(job)
     db.session.commit()
     return {"job_id": job_id}
+
+
+@app.route('/jobs', methods=["GET"])
+def get_job():
+    jobs = []
+    user_token = request.headers["user_token"]
+    user = User.query.filter(User.user_token == user_token).first()
+    places_for_user = user.places
+    for place in places_for_user:
+        jobs_for_place = place.jobs
+        for job_place in jobs_for_place:
+            job = {
+                "job_id": job_place.job_id,
+                "name": job_place.job_name,
+                "duration": job_place.job_duration,
+                "place": {
+                    "name": place.place_name,
+                    "place_id": place.place_id
+                }
+            }
+            print(job)
+            jobs.append(job)
+
+    print(jobs)
+    if jobs:
+        return jobs
+    else:
+        abort(500)
+
+
+@app.route('/jobs/<string:job_id>', methods=["PUT"])
+def put_jobs(job_id):
+    job_name = request.json["name"]
+    job_duration = int(request.json["duration"])
+    place_id = request.json["place"]["place_id"]
 
 
 if __name__ == '__main__':
