@@ -216,9 +216,30 @@ def get_job():
 
 @app.route('/jobs/<string:job_id>', methods=["PUT"])
 def put_jobs(job_id):
+    job = Job.query.filter(Job.job_id == job_id).first()
     job_name = request.json["name"]
     job_duration = int(request.json["duration"])
     place_id = request.json["place"]["place_id"]
+    try:
+        job.job_name = job_name
+        job.job_duration = job_duration
+        job.place_id = place_id
+        db.session.commit()
+        return {"new_name": job_name}
+    except:
+        abort(500)
+
+
+@app.route('/jobs/<string:job_id>', methods=["DELETE"])
+def del_job(job_id):
+    job = Job.query.filter(Job.job_id == job_id).first()
+    name = job.job_name
+    try:
+        db.session.delete(job)
+        db.session.commit()
+        return {"deleted": name}
+    except:
+        abort(500)
 
 
 if __name__ == '__main__':
