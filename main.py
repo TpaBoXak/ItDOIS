@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, jsonify, make_response
+from flask import Flask, request, jsonify, abort
 from flask_sqlalchemy import SQLAlchemy
 import uuid
 import json
@@ -10,102 +10,111 @@ db = SQLAlchemy(app)
 
 
 class User(db.Model):
-    user_id = db.Column(db.String(40), primary_key=True)
+    user_id = db.Column(db.Integer, primary_key=True)
+    user_id_str = db.Column(db.String(40))
     nickname = db.Column(db.String(40))
     salt = db.Column(db.String(100))
     password_hash = db.Column(db.String(40))
     places = db.relationship('Place', backref='user')
-    deals = db.relationship('Deal', backref='user')
-    times = db.relationship('Time', backref='user')
-    duration = db.relationship('Duration', backref='user')
+    jobs = db.relationship('Job', backref='user')
+    durations = db.relationship('Route', backref='user')
 
 
 class Place(db.Model):
-    place_id = db.Column(db.String(40), primary_key=True)
+    place_id = db.Column(db.Integer, primary_key=True)
+    place_id_str = db.Column(db.String(40))
     place_name = db.Column(db.String(40))
-    user_id = db.Column(db.String(40), db.ForeignKey('user.user_id'))
-    deals = db.relationship('Deal', backref='place')
+    user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'))
+    jobs = db.relationship('Job', backref='place')
+    route = db.relationship('Route', backref='place')
 
 
-class Deal(db.Model):
-    deal_id = db.Column(db.String(40), primary_key=True)
-    deal_name = db.Column(db.String(40))
-    user_id = db.Column(db.String(40), db.ForeignKey('user.user_id'))
-    place_id = db.Column(db.String(40), db.ForeignKey('place.place_id'))
-    deal_duration = db.relationship('Duration', backref='deal')
+class Job(db.Model):
+    job_id = db.Column(db.Integer, primary_key=True)
+    job_id_str = db.Column(db.String(40))
+    job_name = db.Column(db.String(40))
+    job_duration = db.Column(db.Integer)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'))
+    place_id = db.Column(db.Integer, db.ForeignKey('place.place_id'))
 
 
-class Duration(db.Model):
-    duration_id = db.Column(db.String(40), primary_key=True, default=str(uuid.uuid4()))
-    user_id = db.Column(db.String(40), db.ForeignKey('user.user_id'))
-    place_id_1 = db.Column(db.String(40), db.ForeignKey('place.place_id'))
-    place_id_2 = db.Column(db.String(40), db.ForeignKey('place.place_id'))
+class Route(db.Model):
+    duration_id = db.Column(db.Integer, primary_key=True)
     route_duration = db.Column(db.Integer)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'))
+    place_id_1 = db.Column(db.Integer, db.ForeignKey('place.place_id'))
+    place_id_2 = db.Column(db.Integer, db.ForeignKey('place.place_id'))
 
 
-@app.route('/registration', methods='POST')
-def registration():
-    user_id = uuid.uuid4()
-    nickname = request.form["nickname"]
-    salt = request.form["salt"]
-    password_hash = request.form["password_hash"]
+@app.route('/registration', methods=["POST"])
+def reg():
+    rand_id = uuid.uuid4()
+    user_id = int(rand_id)
+    user_id_str = str(rand_id)
+    nickname = request.json["nickname"]
+    salt = request.json["salt"]
+    password_hash = request.json["password_hash"]
 
-    user = User(user_id=user_id, nickname=nickname, salt=salt, password_hash=password_hash)
+    user = User(user_id=user_id, user_id_str=user_id_str, nickname=nickname, salt=salt, password_hash=password_hash)
 
     try:
         db.session.add(user)
         db.session.commit()
-        return {"user_id": user_id}
+        return {"user_id": user_id_str}
     except:
-        return make_response("404 Error", 400)
+        return abort(500)
 
 
-@app.route('/newplace', methods='POST')
+@app.route('/places', methods=["POST"])
 def new_place():
-    place_id = uuid.uuid4()
-    place_name = request.form["place_name"]
-    user_id = request.headers['user_id']
+    rand_id = uuid.uuid4()
+    place_id = int(rand_id)
+    place_id_str = str(rand_id)
+    place_name = request.json["place_name"]
+    user_id = int(request.headers["user_id"])
 
-    place = Place(place_id=place_id, place_name=place_name, user_id=user_id)
+    place = Place(place_id=place_id, place_id_str=place_id_str, place_name=place_name, user_id=user_id)
 
     try:
         db.session.add(place)
         db.session.commit()
-        return {"place_id": place_id}
     except:
-        return make_response("404 Error", 400)
+        return abort(500)
+
+    user = User.query.get(user_id)
+    adjacent_place = user.places.all()
+
+    try:
+        for ad_place in adjacent_place:
+            duration_id = int(uuid.uuid4())
+            route = Route(duration_id=duration_id, route_duration=0, user_id=user.user_id, place_id_1=place_id,
+                          place_id_2=ad_place.place_id)
+            db.session.add(route)
+            db.session.commit()
+        return {"place_id": place_id_str}
+    except:
+        return abort(500)
 
 
-@app.route('/newdeal', methods='POST')
+@app.route('/jobs', methods=["POST"])
 def new_deal():
-    deal_id = uuid.uuid4()
-    deal_name = request.form["deal_name"]
-    user_id = request.headers["user_id"]
-    place_id = request.headers["place_id"]
+    rand_id = uuid.uuid4()
+    job_id = int(rand_id)
+    job_id_str = str(rand_id)
+    job_name = request.json["job_name"]
+    user_id = int(request.headers["user_id"])
+    place_id = int(request.headers["place_id"])
 
-    deal = Deal(deal_id=deal_id, deal_name=deal_name, user_id=user_id, place_id=place_id)
+    deal = Job(job_id=job_id, job_id_str=job_id_str, job_name=job_name, user_id=user_id, place_id=place_id)
 
     try:
         db.session.add(deal)
         db.session.commit()
-        return {"deal_id": deal_id}
+        return {"deal_id": job_id_str}
     except:
-        return make_response("404 Error", 400)
+        return abort(500)
 
 
-@app.route('/newduration', methods='POST')
-def new_duration():
-    duration_id = uuid.uuid4()
-    user_id = request.form["user_id"]
-    place_id_1 = request.form["place_id_1"]
-    place_id_2 = request.form["place_id_2"]
-    route_duration = 0
 
-    duration = Duration(duration_id=duration_id, user_id=user_id, place_id_1=place_id_1, place_id_2=place_id_2, route_duration=route_duration)
-
-    try:
-        db.session.add(duration)
-        db.session.commit()
-        return {"duration_id": duration_id}
-    except:
-        return make_response("404 Error", 400)
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0')
