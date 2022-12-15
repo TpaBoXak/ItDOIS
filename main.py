@@ -108,7 +108,7 @@ def new_deal():
     job_name = request.json["name"]
     user_token = request.headers["user_token"]
     user = User.query.filter(User.user_token == user_token).first()
-    place_id = request.json["place_id"]
+    place_id = request.json["place"]["place_id"]
     place = Place.query.filter(Place.place_id == place_id).first()
 
     job = Job(job_id=job_id, job_name=job_name, job_duration=0, user_id=user.user_id, place_id=place.id)
