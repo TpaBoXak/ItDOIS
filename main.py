@@ -59,6 +59,27 @@ def reg():
     return {"user_token": user_token}
 
 
+@app.route('/salt', methods=["GET"])
+def get_salt():
+    nickname = request.json["nickname"]
+    user = User.query.filter(User.nickname == nickname).first()
+    if user:
+        return {"salt": user.salt}
+    else:
+        abort(500)
+
+
+@app.route('/token', methods=["GET"])
+def get_token():
+    nickname = request.json["nickname"]
+    password_hash = request.json["password_hash"]
+    user = User.query.filter(User.nickname == nickname).first()
+    if user and password_hash == user.password_hash:
+        return {"token": user.user_token}
+    else:
+        abort(500)
+
+
 @app.route('/places', methods=["POST"])
 def new_place():
     place_id = str(uuid.uuid4())
@@ -85,6 +106,64 @@ def new_place():
         return {"place_id": place_id}
     except:
         return abort(500)
+
+
+@app.route('/places', methods=["GET"])
+def get_places():
+    places = []
+    user_token = request.headers["user_token"]
+    user = User.query.filter(User.user_token == user_token).first()
+    places_for_user = user.places
+    for place_user in places_for_user:
+        place = {"name": place_user.place_name,
+                 "place_id": place_user.place_id}
+        places.append(place)
+    if places:
+        return places
+    else:
+        abort(500)
+
+
+# @app.route('/test/<string:place_id>', methods=["GET"])
+# def test(place_id):
+#     place = Place.query.filter(Place.place_id == place_id).first()
+#     print(place.user_id)
+#     user = User.query.get(place.user_id)
+#     print(user)
+#     if user:
+#         return {"user_token": user.user_token}
+@app.route('/places/<string:place_id>', methods=["PUT"])
+def put_places(place_id):
+    place = Place.query.filter(Place.place_id == place_id).first()
+    user_token = request.headers["user_token"]
+    true_user = User.query.get(place.user_id)
+    if user_token != true_user.user_token:
+        abort(500)
+    new_name = request.json["name"]
+    try:
+        place.place_name = new_name
+        db.session.commit()
+        return {"new_name": new_name}
+    except:
+        abort(500)
+
+
+@app.route('/places/<string:place_id>', methods=["DELETE"])
+def del_places(place_id):
+    place = Place.query.filter(Place.place_id == place_id).first()
+    jobs_with_place_id = place.jobs
+    for job in jobs_with_place_id:
+        db.session.delete(job)
+    routes = Route.query.filter(Route.place_id_1 == place.id or Route.place_id_2 == place.id).all()
+    for route in routes:
+        db.session.delete(route)
+    name = place.place_name
+    db.session.delete(place)
+    try:
+        db.session.commit()
+        return {"deleted": name}
+    except:
+        abort(500)
 
 
 @app.route('/jobs', methods=["POST"])
