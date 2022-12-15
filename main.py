@@ -52,7 +52,7 @@ def reg():
     salt = request.json["salt"]
     password_hash = request.json["password_hash"]
 
-    if User.query.filter(nickname == nickname).first():
+    if User.query.filter(User.nickname == nickname).first():
         abort(403)
 
     user = User(user_token=user_token, nickname=nickname, salt=salt, password_hash=password_hash)
