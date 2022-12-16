@@ -70,7 +70,7 @@ def get_salt():
     if user:
         return {"salt": user.salt}
     else:
-        abort(500)
+        return {"salt": ""}
 
 
 @app.route('/token', methods=["GET"])
@@ -81,7 +81,7 @@ def get_token():
     if user and password_hash == user.password_hash:
         return {"token": user.user_token}
     else:
-        abort(500)
+        return {"token": ""}
 
 
 @app.route('/places', methods=["POST"])
@@ -125,7 +125,7 @@ def get_places():
     if places:
         return places
     else:
-        abort(500)
+        return []
 
 
 @app.route('/places/<string:place_id>', methods=["PUT"])
@@ -204,7 +204,7 @@ def get_job():
     if jobs:
         return jobs
     else:
-        abort(500)
+        return []
 
 
 @app.route('/jobs/<string:job_id>', methods=["PUT"])
@@ -271,7 +271,7 @@ def get_routes():
     if routes:
         return routes
     else:
-        abort(500)
+        return []
 
 
 def enum(start, end, graph):
@@ -335,12 +335,10 @@ def get_result():
             graph_matrix[j][i] = route.route_duration
 
     graph_way, value_way = enum(graph_start, graph_end, graph_matrix)
-    print(graph_way, value_way)
     way = []
     for i in graph_way:
         place = Place.query.get(transition[i])
         way.append(place.place_id)
-    print(way, value_way)
     return {"way": way,
             "time": value_way}
 
