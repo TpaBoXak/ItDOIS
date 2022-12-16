@@ -1,7 +1,7 @@
-from flask import Flask, request, jsonify, abort
+from flask import Flask, request, abort
 from flask_sqlalchemy import SQLAlchemy
 import uuid
-import json
+import itertools
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
@@ -17,7 +17,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(40))
     places = db.relationship('Place', backref='user')
     jobs = db.relationship('Job', backref='user')
-    durations = db.relationship('Route', backref='user')
+    routes = db.relationship('Route', backref='user')
 
 
 class Place(db.Model):
@@ -38,7 +38,8 @@ class Job(db.Model):
 
 
 class Route(db.Model):
-    duration_id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
+    route_id = db.Column(db.String(40))
     route_duration = db.Column(db.Integer)
     user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'))
     place_id_1 = db.Column(db.Integer)
@@ -103,7 +104,7 @@ def new_place():
         for ad_place in adjacent_place:
             if place_id == ad_place.place_id:
                 continue
-            route = Route(route_duration=0, user_id=user.user_id, place_id_1=place.id, place_id_2=ad_place.id)
+            route = Route(route_id=str(uuid.uuid4()),route_duration=0, user_id=user.user_id, place_id_1=place.id, place_id_2=ad_place.id)
             db.session.add(route)
             db.session.commit()
         return {"place_id": place_id}
@@ -127,14 +128,6 @@ def get_places():
         abort(500)
 
 
-# @app.route('/test/<string:place_id>', methods=["GET"])
-# def test(place_id):
-#     place = Place.query.filter(Place.place_id == place_id).first()
-#     print(place.user_id)
-#     user = User.query.get(place.user_id)
-#     print(user)
-#     if user:
-#         return {"token: user.user_token}
 @app.route('/places/<string:place_id>', methods=["PUT"])
 def put_places(place_id):
     place = Place.query.filter(Place.place_id == place_id).first()
@@ -240,6 +233,116 @@ def del_job(job_id):
         return {"deleted": name}
     except:
         abort(500)
+
+
+@app.route('/routes/<string:route_id>', methods=["PUT"])
+def put_route(route_id):
+    duration = int(request.json["duration"])
+    route = Route.query.filter(Route.route_id == route_id).first()
+    try:
+        route.route_duration = duration
+        db.session.commit()
+        return {"new_duration": duration}
+    except:
+        abort(500)
+
+
+@app.route('/routes', methods=["GET"])
+def get_routes():
+    user_token = request.headers["token"]
+    user = User.query.filter(User.user_token == user_token).first()
+    routes = []
+    routes_for_user = user.routes
+    for route_user in routes_for_user:
+        first_place = Place.query.filter(Place.id == route_user.place_id_1).first()
+        second_place = Place.query.filter(Place.id == route_user.place_id_2).first()
+        route = {"duration": route_user.route_duration,
+                 "route_id": route_user.route_id,
+                 "first_place": {
+                     "name": first_place.place_name,
+                     "place_id": first_place.place_id
+                     },
+                 "second_place": {
+                     "name": second_place.place_name,
+                     "place_id": second_place.place_id
+                    }
+                 }
+        routes.append(route)
+    if routes:
+        return routes
+    else:
+        abort(500)
+
+
+def enum(start, end, graph):
+    res_way = []
+    n = len(graph)
+    val = [i for i in range(n) if i != start and i != end]
+    perm_list = itertools.permutations(val)
+    min_value = 24 * 60
+    if start == end:
+        n += 1
+    for i in perm_list:
+        temp_list = list(i)
+        temp_list.append(end)
+        temp_list.insert(0, start)
+        temp_value = 0
+        for ind in range(1, n):
+            temp_value += graph[temp_list[ind-1]][temp_list[ind]]
+        if temp_value < min_value:
+            min_value = temp_value
+            res_way = temp_list
+    return res_way, min_value
+
+
+@app.route('/min_way', methods=["GET"])
+def get_result():
+    start_place_id = request.json["start"]
+    place_start = Place.query.filter(Place.place_id == start_place_id).first()
+    end_place_id = request.json["end"]
+    place_end = Place.query.filter(Place.place_id == end_place_id).first()
+    start = place_start.id
+    end = place_end.id
+
+    user_token = request.headers["token"]
+    user = User.query.filter(User.user_token == user_token).first()
+    routes = user.routes
+    places_id = []
+    for route in routes:
+        if route.place_id_1 not in places_id:
+            places_id.append(route.place_id_1)
+        if route.place_id_2 not in places_id:
+            places_id.append(route.place_id_2)
+    places_id.sort()
+    transition = {}
+    number_place = len(places_id)
+    graph_start = 0
+    graph_end = 0
+    for i in range(number_place):
+        if places_id[i] == start:
+            graph_start = i
+        elif places_id[i] == end:
+            graph_end = i
+        transition[i] = places_id[i]
+
+    graph_matrix = [[0] * number_place for i in range(number_place)]
+    for i in range(number_place):
+        for j in range(i + 1, number_place):
+            route = Route.query.filter(Route.place_id_1 == transition[i], Route.place_id_2 == transition[j]).first()
+            if not route:
+                route = Route.query.filter(Route.place_id_1 == transition[j], Route.place_id_2 == transition[i]).first()
+            graph_matrix[i][j] = route.route_duration
+            graph_matrix[j][i] = route.route_duration
+
+    graph_way, value_way = enum(graph_start, graph_end, graph_matrix)
+    print(graph_way, value_way)
+    way = []
+    for i in graph_way:
+        place = Place.query.get(transition[i])
+        way.append(place.place_id)
+    print(way, value_way)
+    return {"way": way,
+            "time": value_way}
 
 
 if __name__ == '__main__':
