@@ -104,7 +104,7 @@ def new_place():
         for ad_place in adjacent_place:
             if place_id == ad_place.place_id:
                 continue
-            route = Route(route_id=str(uuid.uuid4()),route_duration=0, user_id=user.user_id, place_id_1=place.id, place_id_2=ad_place.id)
+            route = Route(route_id=str(uuid.uuid4()), route_duration=0, user_id=user.user_id, place_id_1=place.id, place_id_2=ad_place.id)
             db.session.add(route)
             db.session.commit()
         return {"place_id": place_id}
@@ -119,8 +119,9 @@ def get_places():
     user = User.query.filter(User.user_token == user_token).first()
     places_for_user = user.places
     for place_user in places_for_user:
-        place = {"name": place_user.place_name,
-                 "place_id": place_user.place_id}
+        place = {"id": place_user.id,
+                "name": place_user.place_name,
+                "color": place_user.place_id[2:8]}
         places.append(place)
     if places:
         return places
@@ -128,9 +129,9 @@ def get_places():
         return []
 
 
-@app.route('/places/<string:place_id>', methods=["PUT"])
-def put_places(place_id):
-    place = Place.query.filter(Place.place_id == place_id).first()
+@app.route('/places/<string:id>', methods=["PUT"])
+def put_places(id):
+    place = Place.query.get(int(id))
     user_token = request.headers["token"]
     true_user = User.query.get(place.user_id)
     if user_token != true_user.user_token:
@@ -144,13 +145,13 @@ def put_places(place_id):
         abort(500)
 
 
-@app.route('/places/<string:place_id>', methods=["DELETE"])
-def del_places(place_id):
-    place = Place.query.filter(Place.place_id == place_id).first()
+@app.route('/places/<string:id>', methods=["DELETE"])
+def del_places(id):
+    place = Place.query.get(int(id))
     jobs_with_place_id = place.jobs
     for job in jobs_with_place_id:
         db.session.delete(job)
-    routes = Route.query.filter(Route.place_id_1 == place.id or Route.place_id_2 == place.id).all()
+    routes = Route.query.filter(Route.place_id_1 == id, Route.place_id_2 == id).all()
     for route in routes:
         db.session.delete(route)
     name = place.place_name
@@ -169,8 +170,8 @@ def new_job():
     job_duration = int(request.json["duration"])
     user_token = request.headers["token"]
     user = User.query.filter(User.user_token == user_token).first()
-    place_id = request.json["place"]["place_id"]
-    place = Place.query.filter(Place.place_id == place_id).first()
+    place_id = request.json["id"]
+    place = Place.query.get(int(place_id))
 
     job = Job(job_id=job_id, job_name=job_name, job_duration=job_duration, user_id=user.user_id, place_id=place.id)
 
@@ -189,13 +190,10 @@ def get_job():
         jobs_for_place = place.jobs
         for job_place in jobs_for_place:
             job = {
-                "job_id": job_place.job_id,
+                "id": job_place.id,
                 "name": job_place.job_name,
                 "duration": job_place.job_duration,
-                "place": {
-                    "name": place.place_name,
-                    "place_id": place.place_id
-                }
+                "place": place.id
             }
             print(job)
             jobs.append(job)
@@ -207,12 +205,12 @@ def get_job():
         return []
 
 
-@app.route('/jobs/<string:job_id>', methods=["PUT"])
-def put_jobs(job_id):
-    job = Job.query.filter(Job.job_id == job_id).first()
+@app.route('/jobs/<string:id>', methods=["PUT"])
+def put_jobs(id):
+    job = Job.query.get(id)
     job_name = request.json["name"]
     job_duration = int(request.json["duration"])
-    place_id = request.json["place"]["place_id"]
+    place_id = request.json["place"]
     try:
         job.job_name = job_name
         job.job_duration = job_duration
@@ -223,9 +221,9 @@ def put_jobs(job_id):
         abort(500)
 
 
-@app.route('/jobs/<string:job_id>', methods=["DELETE"])
-def del_job(job_id):
-    job = Job.query.filter(Job.job_id == job_id).first()
+@app.route('/jobs/<string:id>', methods=["DELETE"])
+def del_job(id):
+    job = Job.query.get(id)
     name = job.job_name
     try:
         db.session.delete(job)
@@ -235,10 +233,10 @@ def del_job(job_id):
         abort(500)
 
 
-@app.route('/routes/<string:route_id>', methods=["PUT"])
-def put_route(route_id):
+@app.route('/routes/<string:id>', methods=["PUT"])
+def put_route(id):
     duration = int(request.json["duration"])
-    route = Route.query.filter(Route.route_id == route_id).first()
+    route = Route.query.get(id)
     try:
         route.route_duration = duration
         db.session.commit()
@@ -257,15 +255,9 @@ def get_routes():
         first_place = Place.query.filter(Place.id == route_user.place_id_1).first()
         second_place = Place.query.filter(Place.id == route_user.place_id_2).first()
         route = {"duration": route_user.route_duration,
-                 "route_id": route_user.route_id,
-                 "first_place": {
-                     "name": first_place.place_name,
-                     "place_id": first_place.place_id
-                     },
-                 "second_place": {
-                     "name": second_place.place_name,
-                     "place_id": second_place.place_id
-                    }
+                 "id": route_user.id,
+                 "first_place": first_place.id,
+                 "second_place": second_place.id,
                  }
         routes.append(route)
     if routes:
@@ -298,9 +290,9 @@ def enum(start, end, graph):
 @app.route('/min_way', methods=["GET"])
 def get_result():
     start_place_id = request.json["start"]
-    place_start = Place.query.filter(Place.place_id == start_place_id).first()
+    place_start = Place.query.get(start_place_id)
     end_place_id = request.json["end"]
-    place_end = Place.query.filter(Place.place_id == end_place_id).first()
+    place_end = Place.query.get(end_place_id)
     start = place_start.id
     end = place_end.id
 
@@ -338,11 +330,10 @@ def get_result():
     way = []
     for i in graph_way:
         place = Place.query.get(transition[i])
-        way.append(place.place_id)
+        way.append(place.id)
     return {"way": way,
             "time": value_way}
 
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
-
