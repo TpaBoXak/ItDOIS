@@ -193,7 +193,11 @@ def get_job():
                 "id": job_place.id,
                 "name": job_place.job_name,
                 "duration": job_place.job_duration,
-                "place": place.id
+                "place": {
+                    "id": place.id,
+                    "name": place.name,
+                    "color": place.place_id[2:8]
+                }
             }
             print(job)
             jobs.append(job)
@@ -256,8 +260,14 @@ def get_routes():
         second_place = Place.query.filter(Place.id == route_user.place_id_2).first()
         route = {"duration": route_user.route_duration,
                  "id": route_user.id,
-                 "first_place": first_place.id,
-                 "second_place": second_place.id,
+                 "first_place": {
+                     "name": first_place.name,
+                     "color": first_place.place_id[2:8],
+                     "id": first_place.id},
+                 "second_place": {
+                     "color": second_place.place_id[2:8],
+                     "name": second_place.name,
+                     "id": second_place.id}
                  }
         routes.append(route)
     if routes:
