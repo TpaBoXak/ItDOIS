@@ -65,12 +65,12 @@ def reg():
 
 @app.route('/salt', methods=["GET"])
 def get_salt():
-    nickname = request.json["username"]
+    nickname = request.headers["username"]
     user = User.query.filter(User.nickname == nickname).first()
     if user:
         return {"salt": user.salt}
     else:
-        return {"salt": ""}
+        abort(500)
 
 
 @app.route('/token', methods=["GET"])
@@ -81,7 +81,7 @@ def get_token():
     if user and password_hash == user.password_hash:
         return {"token": user.user_token}
     else:
-        return {"token": ""}
+        return abort(500)
 
 
 @app.route('/places', methods=["POST"])
@@ -195,7 +195,7 @@ def get_job():
                 "duration": job_place.job_duration,
                 "place": {
                     "id": place.id,
-                    "name": place.name,
+                    "name": place.place_name,
                     "color": place.place_id[2:8]
                 }
             }
@@ -261,12 +261,12 @@ def get_routes():
         route = {"duration": route_user.route_duration,
                  "id": route_user.id,
                  "first_place": {
-                     "name": first_place.name,
+                     "name": first_place.place_name,
                      "color": first_place.place_id[2:8],
                      "id": first_place.id},
                  "second_place": {
                      "color": second_place.place_id[2:8],
-                     "name": second_place.name,
+                     "name": second_place.place_name,
                      "id": second_place.id}
                  }
         routes.append(route)
