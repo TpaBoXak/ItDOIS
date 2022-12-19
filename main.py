@@ -145,13 +145,16 @@ def put_places(id):
         abort(500)
 
 
-@app.route('/places/<string:id>', methods=["DELETE"])
+@app.route('/places/<int:id>', methods=["DELETE"])
 def del_places(id):
-    place = Place.query.get(int(id))
+    place = Place.query.get(id)
     jobs_with_place_id = place.jobs
     for job in jobs_with_place_id:
         db.session.delete(job)
-    routes = Route.query.filter(Route.place_id_1 == id, Route.place_id_2 == id).all()
+    routes = Route.query.filter(Route.place_id_1 == id).all()
+    for route in routes:
+        db.session.delete(route)
+    routes = Route.query.filter(Route.place_id_2 == id).all()
     for route in routes:
         db.session.delete(route)
     name = place.place_name
