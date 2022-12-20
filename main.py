@@ -75,8 +75,8 @@ def get_salt():
 
 @app.route('/token', methods=["GET"])
 def get_token():
-    nickname = request.json["username"]
-    password_hash = request.json["password_hash"]
+    nickname = request.headers["username"]
+    password_hash = request.headers["password_hash"]
     user = User.query.filter(User.nickname == nickname).first()
     if user and password_hash == user.password_hash:
         return {"token": user.user_token}
