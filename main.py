@@ -173,7 +173,7 @@ def new_job():
     job_duration = int(request.json["duration"])
     user_token = request.headers["token"]
     user = User.query.filter(User.user_token == user_token).first()
-    place_id = request.json["id"]
+    place_id = request.json["place"]["id"]
     place = Place.query.get(int(place_id))
 
     job = Job(job_id=job_id, job_name=job_name, job_duration=job_duration, user_id=user.user_id, place_id=place.id)
@@ -217,11 +217,11 @@ def put_jobs(id):
     job = Job.query.get(id)
     job_name = request.json["name"]
     job_duration = int(request.json["duration"])
-    place_id = request.json["place"]
+    place_id = request.json["place"]["id"]
     try:
         job.job_name = job_name
         job.job_duration = job_duration
-        job.place_id = place_id
+        job.place_id = int(place_id)
         db.session.commit()
         return {"new_name": job_name}
     except:
