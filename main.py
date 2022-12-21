@@ -47,7 +47,7 @@ class Route(db.Model):
 
 
 @app.route('/registration', methods=["POST"])
-def reg():
+def registration():
     user_token = str(uuid.uuid4())
     nickname = request.json["username"]
     salt = request.json["salt"]
@@ -123,19 +123,16 @@ def get_places():
                 "name": place_user.place_name,
                 "color": place_user.place_id[2:8]}
         places.append(place)
-    if places:
-        return places
-    else:
-        return []
+    return places
 
 
-@app.route('/places/<string:id>', methods=["PUT"])
-def put_places(id):
-    place = Place.query.get(int(id))
+@app.route('/places/<int:id>', methods=["PUT"])
+def put_place(id):
+    place = Place.query.get(id)
     user_token = request.headers["token"]
     true_user = User.query.get(place.user_id)
     if user_token != true_user.user_token:
-        abort(500)
+        abort(404)
     new_name = request.json["name"]
     try:
         place.place_name = new_name
@@ -146,8 +143,12 @@ def put_places(id):
 
 
 @app.route('/places/<int:id>', methods=["DELETE"])
-def del_places(id):
+def del_place(id):
     place = Place.query.get(id)
+    user_token = request.headers["token"]
+    true_user = User.query.get(place.user_id)
+    if user_token != true_user.user_token:
+        abort(404)
     jobs_with_place_id = place.jobs
     for job in jobs_with_place_id:
         db.session.delete(job)
@@ -184,7 +185,7 @@ def new_job():
 
 
 @app.route('/jobs', methods=["GET"])
-def get_job():
+def get_jobs():
     jobs = []
     user_token = request.headers["token"]
     user = User.query.filter(User.user_token == user_token).first()
@@ -202,19 +203,17 @@ def get_job():
                     "color": place.place_id[2:8]
                 }
             }
-            print(job)
             jobs.append(job)
-
-    print(jobs)
-    if jobs:
-        return jobs
-    else:
-        return []
+    return jobs
 
 
-@app.route('/jobs/<string:id>', methods=["PUT"])
-def put_jobs(id):
+@app.route('/jobs/<int:id>', methods=["PUT"])
+def put_job(id):
     job = Job.query.get(id)
+    user_token = request.headers["token"]
+    true_user = User.query.get(job.user_id)
+    if user_token != true_user.user_token:
+        abort(404)
     job_name = request.json["name"]
     job_duration = int(request.json["duration"])
     place_id = request.json["place"]["id"]
@@ -228,9 +227,13 @@ def put_jobs(id):
         abort(500)
 
 
-@app.route('/jobs/<string:id>', methods=["DELETE"])
-def del_job(id):
+@app.route('/jobs/<int:id>', methods=["DELETE"])
+def delete_job(id):
     job = Job.query.get(id)
+    user_token = request.headers["token"]
+    true_user = User.query.get(job.user_id)
+    if user_token != true_user.user_token:
+        abort(404)
     name = job.job_name
     try:
         db.session.delete(job)
@@ -240,10 +243,14 @@ def del_job(id):
         abort(500)
 
 
-@app.route('/routes/<string:id>', methods=["PUT"])
+@app.route('/routes/<int:id>', methods=["PUT"])
 def put_route(id):
     duration = int(request.json["duration"])
     route = Route.query.get(id)
+    user_token = request.headers["token"]
+    true_user = User.query.get(route.user_id)
+    if user_token != true_user.user_token:
+        abort(404)
     try:
         route.route_duration = duration
         db.session.commit()
@@ -273,10 +280,8 @@ def get_routes():
                      "id": second_place.id}
                  }
         routes.append(route)
-    if routes:
-        return routes
-    else:
-        return []
+
+    return routes
 
 
 def enum(start, end, graph):
