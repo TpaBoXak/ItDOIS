@@ -356,7 +356,10 @@ def get_result():
 
 
 def way_to_out(way, rand_temp):
-    rand_entry = 0
+    if rand_temp != 10:
+        rand_entry = 0
+    else:
+        rand_entry = 10
     result_way = {
         "jobs": [],
         "xjobs": [],
