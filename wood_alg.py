@@ -30,7 +30,7 @@ def ost_tree(G):
     return res_graph
 
 
-def DFS(ostov_tree, graph, start, end):
+def DFS(ostov_tree, start, end):
     res_way = [start]
     n = len(ostov_tree)
     used = [False] * n
@@ -55,5 +55,5 @@ def DFS(ostov_tree, graph, start, end):
 
 def way_wood_alg(start, end, graph):
     tree = ost_tree(graph)
-    way = DFS(tree, graph, start, end)
+    way = DFS(tree, start, end)
     return way

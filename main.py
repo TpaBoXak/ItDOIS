@@ -310,18 +310,14 @@ def enum(start, end, graph):
 @app.route('/min_way', methods=["GET"])
 def get_result():
     start_place_id = request.headers["start"]
-    place_start = Place.query.get(start_place_id)
     end_place_id = request.headers["end"]
-    place_end = Place.query.get(end_place_id)
-    start = place_start.id
-    end = place_end.id
 
     user_token = request.headers["token"]
     user = User.query.filter(User.user_token == user_token).first()
     places = user.places
     places_id = []
     for place in places:
-        if place.jobs:
+        if place.jobs or place.id == start_place_id or place.id == end_place_id:
             places_id.append(place.id)
     if not places_id or len(places_id) == 1:
         abort(500)
@@ -331,9 +327,9 @@ def get_result():
     graph_start = 0
     graph_end = 0
     for i in range(number_place):
-        if places_id[i] == start:
+        if places_id[i] == int(start_place_id):
             graph_start = i
-        elif places_id[i] == end:
+        if places_id[i] == int(end_place_id):
             graph_end = i
         transition[i] = places_id[i]
 
@@ -394,7 +390,7 @@ def way_to_out(way):
             }
             result_way["xjobs"].append(xjob_to_out)
 
-        if len(xjobs) == len(place_jobs):
+        if len(xjobs) == len(place_jobs) and index_way != 0 and index_way != len(way) - 1:
             way.pop(index_way)
         else:
             for job in jobs:
@@ -419,8 +415,6 @@ def way_to_out(way):
 
         if not route:
             route = Route.query.filter(Route.place_id_2 == way[index_way - 1], Route.place_id_1 == way[index_way]).first()
-            first_place = Place.query.get(way[index_way])
-            second_place = Place.query.get(way[index_way - 1])
 
         if route:
             route_to_out = {
