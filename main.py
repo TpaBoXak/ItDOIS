@@ -1,7 +1,9 @@
 from flask import Flask, request, abort
 from flask_sqlalchemy import SQLAlchemy
+from random import randint
 import uuid
 import itertools
+from wood_alg import *
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///ItDoLS.db'
@@ -302,27 +304,27 @@ def enum(start, end, graph):
         if temp_value < min_value:
             min_value = temp_value
             res_way = temp_list
-    return res_way, min_value
+    return res_way
 
 
 @app.route('/min_way', methods=["GET"])
 def get_result():
-    start_place_id = request.json["start"]
+    start_place_id = request.headers["start"]
     place_start = Place.query.get(start_place_id)
-    end_place_id = request.json["end"]
+    end_place_id = request.headers["end"]
     place_end = Place.query.get(end_place_id)
     start = place_start.id
     end = place_end.id
 
     user_token = request.headers["token"]
     user = User.query.filter(User.user_token == user_token).first()
-    routes = user.routes
+    places = user.places
     places_id = []
-    for route in routes:
-        if route.place_id_1 not in places_id:
-            places_id.append(route.place_id_1)
-        if route.place_id_2 not in places_id:
-            places_id.append(route.place_id_2)
+    for place in places:
+        if place.jobs:
+            places_id.append(place.id)
+    if not places_id or len(places_id) == 1:
+        abort(500)
     places_id.sort()
     transition = {}
     number_place = len(places_id)
@@ -344,13 +346,97 @@ def get_result():
             graph_matrix[i][j] = route.route_duration
             graph_matrix[j][i] = route.route_duration
 
-    graph_way, value_way = enum(graph_start, graph_end, graph_matrix)
+    graph_way = way_wood_alg(graph_start, graph_end, graph_matrix)
     way = []
     for i in graph_way:
         place = Place.query.get(transition[i])
         way.append(place.id)
-    return {"way": way,
-            "time": value_way}
+
+    ways = []
+    ways.append(way_to_out(way.copy()))
+    ways.append(way_to_out(way.copy()))
+    ways.append(way_to_out(way.copy()))
+    return {"ways": ways}
+
+
+def way_to_out(way):
+    result_way = {
+        "jobs": [],
+        "xjobs": [],
+        "routes": []
+    }
+
+    index_way = 0
+    while index_way < len(way):
+        jobs = []
+        xjobs = []
+        place = Place.query.get(way[index_way])
+        place_jobs = place.jobs
+
+        index_jobs = 0
+        while index_jobs < len(place_jobs):
+            if index_way == 0 or index_way == len(way) - 1 or randint(0, 10) < 8:
+                jobs.append(place_jobs[index_jobs])
+            else:
+                xjobs.append(place_jobs[index_jobs])
+            index_jobs += 1
+
+        for xjob in xjobs:
+            xjob_to_out = {
+                "id": xjob.id,
+                "name": xjob.job_name,
+                "duration": xjob.job_duration,
+                "place": {
+                    "id": place.id,
+                    "name": place.place_name,
+                    "color": place.place_id[2:8]
+                }
+            }
+            result_way["xjobs"].append(xjob_to_out)
+
+        if len(xjobs) == len(place_jobs):
+            way.pop(index_way)
+        else:
+            for job in jobs:
+                job_to_out = {
+                    "id": job.id,
+                    "name": job.job_name,
+                    "duration": job.job_duration,
+                    "place": {
+                        "id": place.id,
+                        "name": place.place_name,
+                        "color": place.place_id[2:8]
+                    }
+                }
+                result_way["jobs"].append(job_to_out)
+
+        index_way += 1
+
+    for index_way in range(1, len(way)):
+        route = Route.query.filter(Route.place_id_1 == way[index_way - 1], Route.place_id_2 == way[index_way]).first()
+        first_place = Place.query.get(way[index_way - 1])
+        second_place = Place.query.get(way[index_way])
+
+        if not route:
+            route = Route.query.filter(Route.place_id_2 == way[index_way - 1], Route.place_id_1 == way[index_way]).first()
+            first_place = Place.query.get(way[index_way])
+            second_place = Place.query.get(way[index_way - 1])
+
+        if route:
+            route_to_out = {
+                "duration": route.route_duration,
+                "id": route.id,
+                "first_place": {
+                    "name": first_place.place_name,
+                    "color": first_place.place_id[2:8],
+                    "id": first_place.id},
+                "second_place": {
+                    "color": second_place.place_id[2:8],
+                    "name": second_place.place_name,
+                    "id": second_place.id}
+            }
+            result_way["routes"].append(route_to_out)
+    return result_way
 
 
 if __name__ == '__main__':
