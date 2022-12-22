@@ -356,6 +356,7 @@ def get_result():
 
 
 def way_to_out(way, rand_temp):
+    rand_entry = 0
     result_way = {
         "jobs": [],
         "xjobs": [],
@@ -371,9 +372,10 @@ def way_to_out(way, rand_temp):
 
         index_jobs = 0
         while index_jobs < len(place_jobs):
-            if index_way == 0 or index_way == len(way) - 1 or randint(0, 10) < rand_temp:
+            if index_way == 0 or index_way == len(way) - 1 or randint(0, 10) < rand_entry:
                 jobs.append(place_jobs[index_jobs])
             else:
+                rand_entry += rand_temp
                 xjobs.append(place_jobs[index_jobs])
             index_jobs += 1
 

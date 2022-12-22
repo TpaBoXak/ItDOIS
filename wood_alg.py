@@ -1,5 +1,5 @@
 def min_str(str_graph, visited):
-    mn_value_ind = [24, 0]
+    mn_value_ind = [12345678, 0]
     for i in range(len(str_graph)):
         if str_graph[i] != 0 and str_graph[i] < mn_value_ind[0] and i not in visited:
             mn_value_ind[0] = str_graph[i]
@@ -7,15 +7,18 @@ def min_str(str_graph, visited):
     return mn_value_ind
 
 
-def ost_tree(G):
-    visited = [0]
-    res_graph = [[0, 0, 0, 0] for i in range(len(G))]
-
+def ost_tree(G, start, end):
+    visited = [start]
+    res_graph = [[0 for i in range(len(G))] for i in range(len(G))]
     for i in range(len(G) - 1):
         edge_min = [0, 0, 12345678]
 
         for ind_vis in visited:
             min_in_str = min_str(G[ind_vis], visited)
+            if min_in_str[1] == end:
+                temp_visited = visited.copy()
+                temp_visited.append(end)
+                min_in_str = min_str(G[ind_vis], temp_visited)
 
             if edge_min[2] > min_in_str[0]:
                 edge_min[0] = ind_vis
@@ -40,7 +43,7 @@ def DFS(ostov_tree, start, end):
         v = Stack[-1]
         moved_deeper = False
         for i in range(n):
-            if ostov_tree[v][i] != 0 and ostov_tree[v][i] != end and not used[i]:
+            if ostov_tree[v][i] != 0 and i != end and not used[i]:
                 moved_deeper = True
                 Stack.append(i)
                 used[i] = True
@@ -48,12 +51,12 @@ def DFS(ostov_tree, start, end):
                 break
         if not moved_deeper:
             Stack.pop()
-    if start == end:
-        res_way.append(end)
+
+    res_way.append(end)
     return res_way
 
 
 def way_wood_alg(start, end, graph):
-    tree = ost_tree(graph)
+    tree = ost_tree(graph, start, end)
     way = DFS(tree, start, end)
     return way
