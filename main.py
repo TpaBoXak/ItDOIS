@@ -368,6 +368,7 @@ def way_to_out(way, rand_temp):
 
     index_way = 0
     while index_way < len(way):
+        print(index_way)
         jobs = []
         xjobs = []
         place = Place.query.get(way[index_way])
@@ -397,6 +398,7 @@ def way_to_out(way, rand_temp):
 
         if len(xjobs) == len(place_jobs) and index_way != 0 and index_way != len(way) - 1:
             way.pop(index_way)
+            index_way -= 1
         else:
             for job in jobs:
                 job_to_out = {
