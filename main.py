@@ -349,13 +349,13 @@ def get_result():
         way.append(place.id)
 
     ways = []
-    ways.append(way_to_out(way.copy()))
-    ways.append(way_to_out(way.copy()))
-    ways.append(way_to_out(way.copy()))
+    ways.append(way_to_out(way.copy(), 10))
+    ways.append(way_to_out(way.copy(), 8))
+    ways.append(way_to_out(way.copy(), 7))
     return {"ways": ways}
 
 
-def way_to_out(way):
+def way_to_out(way, rand_temp):
     result_way = {
         "jobs": [],
         "xjobs": [],
@@ -371,7 +371,7 @@ def way_to_out(way):
 
         index_jobs = 0
         while index_jobs < len(place_jobs):
-            if index_way == 0 or index_way == len(way) - 1 or randint(0, 10) < 8:
+            if index_way == 0 or index_way == len(way) - 1 or randint(0, 10) < rand_temp:
                 jobs.append(place_jobs[index_jobs])
             else:
                 xjobs.append(place_jobs[index_jobs])
